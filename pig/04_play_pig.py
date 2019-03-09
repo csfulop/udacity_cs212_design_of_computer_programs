@@ -71,6 +71,9 @@ def test():
     for _ in range(10):
         winner = play_pig(always_hold, always_roll)
         assert winner.__name__ == 'always_roll'
+    for _ in range(10):
+        winner = play_pig(always_roll, always_hold)
+        assert winner.__name__ == 'always_roll'
     return 'tests pass'
 
 
