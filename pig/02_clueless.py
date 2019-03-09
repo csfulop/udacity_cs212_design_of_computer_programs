@@ -10,7 +10,7 @@ import random
 
 possible_moves = ['roll', 'hold']
 
+
 def clueless(state):
     "A strategy that ignores the state and chooses at random from possible moves."
-    # your code here
-
+    return random.choice(possible_moves)
