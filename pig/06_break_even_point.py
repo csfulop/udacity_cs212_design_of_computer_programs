@@ -14,3 +14,7 @@ def Q(state, action, U):
 U = math.log10
 
 # What is c such that Q(c,'gamble',U) == Q(c,'hold',U)
+print(min(
+    [(abs(Q(c, 'gamble', U) - Q(c, 'hold', U)), c) for c in range(100000, 10000000, 100000)],
+    key=lambda x: x[0]
+))
