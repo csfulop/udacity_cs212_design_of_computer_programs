@@ -51,10 +51,13 @@ def play_pig(A, B, dierolls=dierolls()):
             return strategies[p]
         elif you >= goal:
             return strategies[other[p]]
-        elif strategies[p](state) == 'hold':
+        action = strategies[p](state)
+        if action == 'hold':
             state = hold(state)
-        else:
+        elif action == 'roll':
             state = roll(state, next(dierolls))
+        else:
+            return strategies[other[p]]
 
 
 def bad_strategy(state):
@@ -66,16 +69,12 @@ def illegal_strategy(state):
     return 'I want to win pig please.'
 
 
-print(play_pig(bad_strategy, illegal_strategy).__name__)
-
-
 def test():
     winner = play_pig(bad_strategy, illegal_strategy)
+    assert winner.__name__ == 'bad_strategy'
+    winner = play_pig(illegal_strategy, bad_strategy)
     assert winner.__name__ == 'bad_strategy'
     return 'tests pass'
 
 
 print(test())
-
-
-
