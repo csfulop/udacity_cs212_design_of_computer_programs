@@ -58,8 +58,18 @@ def Pwin2(state):
 
 @memo
 def Pwin3(me, you, pending):
-    pass
-    ## your code here
+    if me + pending >= goal:
+        return 1
+    elif you >= goal:
+        return 0
+    else:
+        following_states = []
+        if pending > 0:
+            following_states.append(1 - Pwin3(you, me + pending, 0))  # HOLD
+        following_states.append(
+            (1 - Pwin3(you, me + 1, 0) +  # ROLL 1
+             sum(Pwin3(me, you, pending + d) for d in (2, 3, 4, 5, 6))) / 6)  # ROLL 2..6
+        return max(following_states)
 
 
 def test():
@@ -75,4 +85,3 @@ def test():
 
 
 print(test())
-
