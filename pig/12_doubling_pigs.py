@@ -18,6 +18,47 @@
 # marked correct. Happy pigging!
 
 import random
+from functools import update_wrapper
+
+
+def decorator(d):
+    "Make function d a decorator: d wraps a function fn."
+
+    def _d(fn):
+        return update_wrapper(d(fn), fn)
+
+    update_wrapper(_d, d)
+    return _d
+
+
+@decorator
+def memo(f):
+    """Decorator that caches the return value for each call to f(args).
+    Then when called again with same args, we can just look it up."""
+    cache = {}
+
+    def _f(*args):
+        try:
+            return cache[args]
+        except KeyError:
+            cache[args] = result = f(*args)
+            return result
+        except TypeError:
+            # some element of args can't be a dict key
+            return f(args)
+
+    return _f
+
+
+@decorator
+def log(f):
+    def _f(*args):
+        print('%s%s' % (f.__name__, args))
+        result = f(*args)
+        print('%s result=%s' % (f.__name__, result))
+        return result
+
+    return _f
 
 
 def pig_actions_d(state):
@@ -32,12 +73,75 @@ def pig_actions_d(state):
     # for the moment at which one player has doubled and is waiting
     # for the other to accept or decline
     (p, me, you, pending, double) = state
-    # your code here
+    if double == 'double':
+        return {'accept', 'decline'}
+    actions = {'roll'}
+    if double == 1:
+        actions.add('double')
+    if pending > 0:
+        actions.add('hold')
+    return actions
+
+
+def U(Q):
+    @memo
+    def U_pig(state):
+        (p, me, you, pending, double) = state
+        if type(double) == int:
+            if me + pending >= goal:
+                return double
+            if you >= goal:
+                return -double
+        return max(Q(state, action, U_pig) for action in pig_actions_d(state))
+
+    return U_pig
+
+
+def Q_pig(state, action, U):
+    (p, me, you, pending, double) = state
+    if action == 'hold':
+        return -U((other[p], you, me + pending, 0, double))
+    if action == 'roll':
+        return (
+                       -U((other[p], you, me + 1, 0, double)) +
+                       sum(U((p, me, you, pending + d, double)) for d in (2, 3, 4, 5, 6))
+               ) / 6.0
+    if action == 'decline':
+        return -1
+    if action == 'accept':
+        return -U((other[p], you, me, pending, 2))
+    if action == 'double':
+        return -U((other[p], you, me, pending, 2))
+
+
+# FIXME: troubleshoot difference between Q_pig and Q_pig_do
+def Q_pig_do(state, action, U):
+    if action == 'roll':
+        return (
+                       -U(do(action, state, iter([1]))) +
+                       sum(U(do(action, state, iter([d]))) for d in (2, 3, 4, 5, 6))
+               ) / 6.0
+    return -U(do(action, state, None))
+
+
+U_pig = U(Q_pig)
+U_pig_do = U(Q_pig_do)
 
 
 def strategy_d(state):
-    # your code here
-    pass
+    def EU(action):
+        return Q_pig(state, action, U_pig)
+
+    def EU_do(action):
+        return Q_pig_do(state, action, U_pig_do)
+
+    actions = pig_actions_d(state)
+    for a in actions:
+        print('      %s -> %f' % (a, EU_do(a)))
+    result = max(actions, key=EU)
+    result_do = max(actions, key=EU_do)
+    print('    strategy_d: %s -> %s / %s%s' % (state, result, result_do, "" if result == result_do else " TILT!!!"))
+    return result
 
 
 ## You can use the code below, but don't need to modify it.
@@ -57,7 +161,9 @@ def clueless_d(state):
 def dierolls():
     "Generate die rolls."
     while True:
-        yield random.randint(1, 6)
+        dice = random.randint(1, 6)
+        print('    %d' % dice)
+        yield dice
 
 
 def play_pig_d(A, B, dierolls=dierolls()):
@@ -65,17 +171,21 @@ def play_pig_d(A, B, dierolls=dierolls()):
     Each time through the main loop we ask the current player for one decision,
     which must be 'hold' or 'roll', and we update the state accordingly.
     When one player's score exceeds the goal, return that player."""
+    print('play_pig_d( %s VS %s)' % (A.__name__, B.__name__))
     strategies = [A, B]
     state = (0, 0, 0, 0, 1)
     while True:
         (p, me, you, pending, double) = state
         if me >= goal:
+            print('  WINNER=%s, points=%d' % (strategies[p].__name__, double))
             return strategies[p], double
         elif you >= goal:
+            print('  WINNER=%s, points=%d' % (strategies[other[p]].__name__, double))
             return strategies[other[p]], double
         else:
             action = strategies[p](state)
             state = do(action, state, dierolls)
+            print('  %s: %s --> %s' % (strategies[p].__name__, action, state))
 
 
 ## No more roll() and hold(); instead, do:
@@ -121,7 +231,8 @@ def strategy_compare(A, B, N=1000):
         else:
             B_points += points
     A_percent = 100 * A_points / float(A_points + B_points)
-    print('In %s games of pig, strategy %s took %s percent of the points against %s.' % (N, A.__name__, A_percent, B.__name__))
+    print('In %s games of pig, strategy %s took %s percent of the points against %s.' % (
+        N, A.__name__, A_percent, B.__name__))
     return A_percent
 
 
@@ -135,3 +246,4 @@ def test():
 
 
 print(test())
+# print(strategy_d((0, 1, 1, 21, 1)))
