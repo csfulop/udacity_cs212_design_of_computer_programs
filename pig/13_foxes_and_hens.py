@@ -41,6 +41,19 @@ def do(action, state):
     # Make sure you always use up one card.
     #
     # your code here
+    (score, yard, cards) = state
+    cards = list(cards)
+    next_card = cards.pop(random.randrange(len(cards)))
+    cards = ''.join(cards)
+    if action == 'wait':
+        if next_card == 'H':
+            return (score, yard + 1, cards)
+        if next_card == 'F':
+            return (score, 0, cards)
+        raise ValueError('Invalid card: ' + next_card)
+    if action == 'gather':
+        return (score + yard, 0, cards)
+    raise ValueError('Invalid action: ' + action)
 
 
 def take5(state):
@@ -58,12 +71,20 @@ def average_score(strategy, N=1000):
 
 def superior(A, B=take5):
     "Does strategy A have a higher average score than B, by more than 1.5 point?"
-    return average_score(A) - average_score(B) > 1.5
+    score_a = average_score(A)
+    score_b = average_score(B)
+    print('score(A)=%f, score(B)=%f' % (score_a, score_b))
+    return score_a - score_b > 1.5
 
 
 def strategy(state):
-    (score, yard, cards) = state
     # your code here
+    (score, yard, cards) = state
+    foxes = cards.count('F')
+    if foxes == 0 or yard < len(cards) / foxes - 3:
+        return 'wait'
+    else:
+        return 'gather'
 
 
 def test():
