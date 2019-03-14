@@ -87,6 +87,102 @@ def strategy(state):
         return 'gather'
 
 
+from functools import update_wrapper
+
+
+def decorator(d):
+    "Make function d a decorator: d wraps a function fn."
+
+    def _d(fn):
+        return update_wrapper(d(fn), fn)
+
+    update_wrapper(_d, d)
+    return _d
+
+
+@decorator
+def memo(f):
+    """Decorator that caches the return value for each call to f(args).
+    Then when called again with same args, we can just look it up."""
+    cache = {}
+
+    def _f(*args):
+        try:
+            return cache[args]
+        except KeyError:
+            cache[args] = result = f(*args)
+            return result
+        except TypeError:
+            # some element of args can't be a dict key
+            return f(args)
+
+    return _f
+
+
+def actions(state):
+    "Available actions in state"
+    (score, yard, cards) = state
+    if yard > 0:
+        return ('wait', 'gather')
+    else:
+        return ('wait',)
+
+
+def draw_fox(cards):
+    "The deck after drawing a Fox"
+    return cards.replace('F', '', 1)
+
+
+def draw_hen(cards):
+    "The deck after drawing a Hen"
+    return cards.replace('H', '', 1)
+
+
+@memo
+def U_foxes(state):
+    "Utility of the given state"
+    (score, yard, cards) = state
+    if not cards:  # Utility is the score if there are no more cards
+        return score + yard
+    else:  # Utility if the maximum Quality of the available actions
+        qs = list(Q_foxes(state, action, U_foxes) for action in actions(state))
+        return max(qs)
+
+
+def Q_foxes(state, action, U):
+    "The expected Utility of choosing action in state."
+    (score, yard, cards) = state
+    foxes = cards.count('F')
+    hens = cards.count('H')
+    if action == 'wait':
+        e_foxes, e_hens = 0, 0
+        if foxes > 0:
+            e_foxes = U((score, 0, draw_fox(cards))) * foxes / float(len(cards))
+        if hens > 0:
+            e_hens = U((score, yard + 1, draw_hen(cards))) * hens / float(len(cards))
+        return e_foxes + e_hens
+    if action == 'gather':
+        e_foxes, e_hens = 0, 0
+        if foxes > 0:
+            e_foxes = U((score + yard, 0, draw_fox(cards))) * foxes / float(len(cards))
+        if hens > 0:
+            e_hens = U((score + yard, 0, draw_hen(cards))) * hens / float(len(cards))
+        return e_foxes + e_hens
+    raise ValueError(action)
+
+
+def best_action(state, actions, Q, U):
+    "Return the optimal action for a state, given U."
+
+    def EU(action): return Q(state, action, U)
+
+    return max(actions(state), key=EU)
+
+
+def best_strategy(state):
+    return best_action(state, actions, Q_foxes, U_foxes)
+
+
 def test():
     gather = do('gather', (4, 5, 'F' * 4 + 'H' * 10))
     assert (gather == (9, 0, 'F' * 3 + 'H' * 10) or
@@ -97,6 +193,7 @@ def test():
             wait == (10, 0, 'FHH'))
 
     assert superior(strategy)
+    assert superior(best_strategy)
     return 'tests pass'
 
 
