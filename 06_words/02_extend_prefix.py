@@ -36,11 +36,17 @@ def find_words(letters):
     results = set()
 
     def extend_prefix(w, letters):
-        if w in WORDS:  ###Your code here.
-            if w not in PREFIXES: return
+        if w in WORDS:
+            ### Your code here.
+            results.add(w)
+        if w not in PREFIXES:
+            return
         for L in letters:
-
-    ###Your code here.
+            ### Your code here
+            extend_prefix(w + L, removed(letters, L))
 
     extend_prefix('', letters)
     return results
+
+
+print(find_words('TABLE'))
