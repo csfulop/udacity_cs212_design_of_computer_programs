@@ -136,12 +136,28 @@ def strategy_d(state):
         return Q_pig_do(state, action, U_pig_do)
 
     actions = pig_actions_d(state)
-    for a in actions:
-        print('      %s -> %f' % (a, EU_do(a)))
+    # for a in actions:
+    #     print('      %s -> %f' % (a, EU_do(a)))
     result = max(actions, key=EU)
     result_do = max(actions, key=EU_do)
-    print('    strategy_d: %s -> %s / %s%s' % (state, result, result_do, "" if result == result_do else " TILT!!!"))
+    # print('    strategy_d: %s -> %s / %s%s' % (state, result, result_do, "" if result == result_do else " TILT!!!"))
     return result
+
+
+def strategy_d_do(state):
+    def EU(action):
+        return Q_pig(state, action, U_pig)
+
+    def EU_do(action):
+        return Q_pig_do(state, action, U_pig_do)
+
+    actions = pig_actions_d(state)
+    # for a in actions:
+    #     print('      %s -> %f' % (a, EU_do(a)))
+    result = max(actions, key=EU)
+    result_do = max(actions, key=EU_do)
+    # print('    strategy_d: %s -> %s / %s%s' % (state, result, result_do, "" if result == result_do else " TILT!!!"))
+    return result_do
 
 
 ## You can use the code below, but don't need to modify it.
@@ -162,7 +178,7 @@ def dierolls():
     "Generate die rolls."
     while True:
         dice = random.randint(1, 6)
-        print('    %d' % dice)
+        # print('    %d' % dice)
         yield dice
 
 
@@ -171,21 +187,21 @@ def play_pig_d(A, B, dierolls=dierolls()):
     Each time through the main loop we ask the current player for one decision,
     which must be 'hold' or 'roll', and we update the state accordingly.
     When one player's score exceeds the goal, return that player."""
-    print('play_pig_d( %s VS %s)' % (A.__name__, B.__name__))
+    # print('play_pig_d( %s VS %s)' % (A.__name__, B.__name__))
     strategies = [A, B]
     state = (0, 0, 0, 0, 1)
     while True:
         (p, me, you, pending, double) = state
         if me >= goal:
-            print('  WINNER=%s, points=%d' % (strategies[p].__name__, double))
+            # print('  WINNER=%s, points=%d' % (strategies[p].__name__, double))
             return strategies[p], double
         elif you >= goal:
-            print('  WINNER=%s, points=%d' % (strategies[other[p]].__name__, double))
+            # print('  WINNER=%s, points=%d' % (strategies[other[p]].__name__, double))
             return strategies[other[p]], double
         else:
             action = strategies[p](state)
             state = do(action, state, dierolls)
-            print('  %s: %s --> %s' % (strategies[p].__name__, action, state))
+            # print('  %s: %s --> %s' % (strategies[p].__name__, action, state))
 
 
 ## No more roll() and hold(); instead, do:
@@ -242,6 +258,8 @@ def test():
     assert set(pig_actions_d((0, 5, 5, 5, 1))) == set(['roll', 'hold', 'double'])
     assert set(pig_actions_d((1, 10, 15, 6, 'double'))) == set(['accept', 'decline'])
     assert strategy_compare(strategy_d, hold_20_d) > 60  # must win 60% of the points
+    strategy_compare(strategy_d, strategy_d_do)
+    strategy_compare(strategy_d_do, hold_20_d)
     return 'test passes'
 
 
