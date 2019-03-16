@@ -82,6 +82,7 @@ assert (word_plays('ADEQUAT', set('IRE')) ==
 def longest_words(hand, board_letters):
     "Return all word plays, longest first."
     ###Your code here.
+    return sorted(word_plays(hand, board_letters), reverse=True, key=len)
 
 
 def timedcall(fn, *args):
@@ -151,6 +152,13 @@ def test_words():
     assert removed('LETTERS', 'T') == 'LETERS'
     assert removed('LETTERS', 'SET') == 'LTER'
     assert removed('LETTERS', 'SETTER') == 'L'
+    for hand, expected in hands.items():
+        board = hand[0]
+        result = longest_words(hand[1:], board)
+        for i in range(len(result) - 1):
+            assert len(result[i]) >= len(result[i + 1])
+        expected_with_board = set(r for r in expected if board in r)
+        assert set(result) == expected_with_board
     t, results = timedcall(map, find_words, hands)
     for ((hand, expected), got) in zip(hands.items(), results):
         assert got == expected, "For %r: got %s, expected %s (diff %s)" % (
