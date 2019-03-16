@@ -18,9 +18,9 @@ def a_board():
 
 def show(board):
     "Print the board."
+    ###Your code here.
     for row in board:
         print(' '.join(row))
-    ###Your code here.
 
 
 # >>> a_board()
@@ -39,7 +39,7 @@ def show(board):
 
 def test():
     board = a_board()
-    show(a_board())
+    show(board)
 
 
 test()
