@@ -57,6 +57,13 @@ def find_prefixes(hand, pre='', results=None):
 def add_suffixes(hand, pre, results):
     """Return the set of words that can be formed by extending pre with letters in hand."""
     ###Your code here.
+    if pre in WORDS:
+        results.add(pre)
+    if pre not in PREFIXES:
+        return results
+    for L in hand:
+        add_suffixes(removed(hand, L), pre + L, results)
+    return results
 
 
 def removed(letters, remove):
@@ -133,6 +140,11 @@ def test_words():
     assert removed('LETTERS', 'T') == 'LETERS'
     assert removed('LETTERS', 'SET') == 'LTER'
     assert removed('LETTERS', 'SETTER') == 'L'
+    for hand, expected in hands.items():
+        board = hand[0]
+        result = word_plays(hand[1:], board)
+        expected_with_board = set(r for r in expected if board in r)
+        assert result == expected_with_board
     t, results = timedcall(map, find_words, hands)
     for ((hand, expected), got) in zip(hands.items(), results):
         assert got == expected, "For %r: got %s, expected %s (diff %s)" % (
