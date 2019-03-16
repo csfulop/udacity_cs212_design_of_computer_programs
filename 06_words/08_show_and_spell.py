@@ -18,7 +18,10 @@ def a_board():
 
 def show(board):
     "Print the board."
+    for row in board:
+        print(' '.join(row))
     ###Your code here.
+
 
 # >>> a_board()
 # [['|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|', '|'],
@@ -34,3 +37,9 @@ def show(board):
 # | G U Y . . . . F . H . . . L . |
 # | | | | | | | | | | | | | | | | |
 
+def test():
+    board = a_board()
+    show(a_board())
+
+
+test()
