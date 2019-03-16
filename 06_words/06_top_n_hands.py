@@ -100,6 +100,7 @@ def word_score(word):
 def topn(hand, board_letters, n=10):
     "Return a list of the top n words that hand can play, sorted by word score."
     ###Your code here.
+    return sorted(word_plays(hand, board_letters), key=word_score, reverse=True)[:n]
 
 
 def timedcall(fn, *args):
@@ -169,6 +170,9 @@ def test_words():
     assert removed('LETTERS', 'T') == 'LETERS'
     assert removed('LETTERS', 'SET') == 'LTER'
     assert removed('LETTERS', 'SETTER') == 'L'
+
+    assert topn('TOXENSI', 'X', n=1) == ['EXIST']
+
     t, results = timedcall(map, find_words, hands)
     for ((hand, expected), got) in zip(hands.items(), results):
         assert got == expected, "For %r: got %s, expected %s (diff %s)" % (
@@ -177,4 +181,3 @@ def test_words():
 
 
 print(test_words())
-
