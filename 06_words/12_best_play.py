@@ -264,7 +264,7 @@ def best_play(hand, board):
     "Return the highest-scoring play.  Or None."
     ###Your code here.
     plays = all_plays(hand, board)
-    return max(plays, key=lambda x: x[0])
+    return max(plays, key=lambda x: x[0]) if plays else NOPLAY
 
 
 def a_board():
@@ -279,6 +279,7 @@ def test():
     board = a_board()
     hand = 'ASDFQWER'
     print(best_play(hand, board))
+    print(best_play('', board))
     return 'tests pass'
 
 
