@@ -25,7 +25,7 @@ def transpose(matrix):
 
 def readwordlist(filename):
     "Return a pair of sets: all the words in a file, and all the prefixes. (Uppercased.)"
-    wordset = set(file(filename).read().upper().split())
+    wordset = set(open(filename).read().upper().split())
     prefixset = set(p for word in wordset for p in prefixes(word))
     return wordset, prefixset
 
@@ -158,6 +158,10 @@ def set_anchors(row, j, board):
                 row[i] = ANY
 
 
+POINTS = dict(A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N=1, O=1, P=3, Q=10, R=1, S=1, T=1, U=1,
+              V=4, W=4, X=8, Y=4, Z=10, _=0)
+
+
 def calculate_score(board, pos, direction, hand, word):
     "Return the total score for this play."
     total, crosstotal, word_mult = 0, 0, 1
@@ -210,7 +214,7 @@ def all_plays(hand, board):
 
 def bonus_template(quadrant):
     "Make a board from the upper-left quadrant."
-    return mirror(map(mirror, quadrant.split()))
+    return mirror(list(map(mirror, quadrant.split())))
 
 
 def mirror(sequence): return sequence + sequence[-2::-1]
@@ -245,7 +249,31 @@ BONUS = WWF
 DW, TW, DL, TL = '23:;'
 
 
-def show(board):
+def a_board():
+    return map(list, ['|||||||||||||||||',
+                      '|J............I.|',
+                      '|A.....BE.C...D.|',
+                      '|GUY....F.H...L.|',
+                      '|||||||||||||||||'])
+
+
+def a_bonus():
+    return map(list, ['|||||||||||||||||',
+                      '|2...;...2...;..|',
+                      '|.3.:.:.3.3.:.:.|',
+                      '|..2...;...2...;|',
+                      '|||||||||||||||||'])
+
+
+def show(board, bonus=BONUS):
     "Print the board."
     ###Your code here.
+    for row, bonus_row in zip(board, bonus):
+        print(' '.join(sq if is_letter(sq) else sqb for sq, sqb in zip(row, bonus_row)))
 
+
+def test():
+    show(a_board(), a_bonus())
+
+
+test()
