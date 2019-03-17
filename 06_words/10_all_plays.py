@@ -20,7 +20,7 @@ def prefixes(word):
 def transpose(matrix):
     "Transpose e.g. [[1,2,3], [4,5,6]] to [[1, 4], [2, 5], [3, 6]]"
     # or [[M[j][i] for j in range(len(M))] for i in range(len(M[0]))]
-    return map(list, zip(*matrix))
+    return list(map(list, zip(*matrix)))
 
 
 def readwordlist(filename):
@@ -177,3 +177,20 @@ def all_plays(hand, board):
     hplays = horizontal_plays(hand, board)  # set of ((i, j), word)
     vplays = horizontal_plays(hand, transpose(board))  # set of ((j, i), word)
     ###Your code here.
+    return {(pos, ACROSS, word) for pos, word in hplays} | {((i, j), DOWN, word) for (j, i), word in vplays}
+
+
+def a_board():
+    return list(map(list, ['|||||||||||||||||',
+                           '|J............I.|',
+                           '|A.....BE.C...D.|',
+                           '|GUY....F.H...L.|',
+                           '|||||||||||||||||']))
+
+
+def test():
+    res = all_plays('ASDFQWER', a_board())
+    print(res)
+
+
+test()
