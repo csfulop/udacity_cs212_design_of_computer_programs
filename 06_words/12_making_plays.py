@@ -10,7 +10,7 @@ POINTS = dict(A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N
 
 def bonus_template(quadrant):
     "Make a board from the upper-left quadrant."
-    return mirror(map(mirror, quadrant.split()))
+    return mirror(list(map(mirror, quadrant.split())))
 
 
 def mirror(sequence): return sequence + sequence[-2::-1]
@@ -252,4 +252,33 @@ def make_play(play, board):
     "Put the word down on the board."
     (score, (i, j), (di, dj), word) = play
     ###Your code here.
+    for L in word:
+        board[j][i] = L
+        i, j = i + di, j + dj
     return board
+
+
+def a_board():
+    return list(map(list, ['|||||||||||||||||',
+                           '|J............I.|',
+                           '|A.....BE.C...D.|',
+                           '|GUY....F.H...L.|',
+                           '|||||||||||||||||']))
+
+
+def show(board):
+    "Print the board."
+    for row in board:
+        print(' '.join(row))
+
+
+def test():
+    board = a_board()
+    show(board)
+    play = (0, (12, 1), (1, 0), 'SAID')
+    board = make_play(play, board)
+    show(board)
+    return 'tests pass'
+
+
+print(test())
