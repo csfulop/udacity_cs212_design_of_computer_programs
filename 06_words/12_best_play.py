@@ -11,7 +11,7 @@ POINTS = dict(A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N
 
 def bonus_template(quadrant):
     "Make a board from the upper-left quadrant."
-    return mirror(map(mirror, quadrant.split()))
+    return mirror(list(map(mirror, quadrant.split())))
 
 
 def mirror(sequence): return sequence + sequence[-2::-1]
@@ -61,7 +61,7 @@ def prefixes(word):
 def transpose(matrix):
     "Transpose e.g. [[1,2,3], [4,5,6]] to [[1, 4], [2, 5], [3, 6]]"
     # or [[M[j][i] for j in range(len(M))] for i in range(len(M[0]))]
-    return map(list, zip(*matrix))
+    return list(map(list, zip(*matrix)))
 
 
 def readwordlist(filename):
@@ -263,3 +263,23 @@ NOPLAY = None
 def best_play(hand, board):
     "Return the highest-scoring play.  Or None."
     ###Your code here.
+    plays = all_plays(hand, board)
+    return max(plays, key=lambda x: x[0])
+
+
+def a_board():
+    return list(map(list, ['|||||||||||||||||',
+                           '|J............I.|',
+                           '|A.....BE.C...D.|',
+                           '|GUY....F.H...L.|',
+                           '|||||||||||||||||']))
+
+
+def test():
+    board = a_board()
+    hand = 'ASDFQWER'
+    print(best_play(hand, board))
+    return 'tests pass'
+
+
+print(test())
