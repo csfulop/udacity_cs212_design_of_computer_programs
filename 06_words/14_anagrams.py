@@ -15,12 +15,24 @@
 # your function returns should include 'AN ARM SAG', but should NOT
 # include 'ARM SAG AN', or 'SAG AN ARM', etc...
 
+
 def anagrams(phrase, shortest=2):
     """Return a set of phrases with words from WORDS that form anagram
     of phrase. Spaces can be anywhere in phrase or anagram. All words
     have length >= shortest. Phrases in answer must have words in
     lexicographic order (not all permutations)."""
     # your code here
+    phrase = phrase.replace(' ', '')
+    results = set()
+    for word in find_words(phrase):
+        if len(word) < shortest:
+            continue
+        remaining = removed(phrase, word)
+        if not remaining:
+            results.add(word)
+        else:
+            results.update(' '.join(sorted([word] + res.split())) for res in anagrams(remaining, shortest))
+    return results
 
 
 # ------------
@@ -78,6 +90,7 @@ def test():
         'ICY NO PHT', 'ICY ON PHT', 'ICY NTH OP', 'COP IN THY', 'HYP ON TIC',
         'CON PI THY', 'HYP NO TIC', 'COY NTH PI', 'CON HYP IT', 'COT HYP IN',
         'CON HYP TI'])
+    assert anagrams('PYTHONIC', 3) == set()
     return 'tests pass'
 
 
