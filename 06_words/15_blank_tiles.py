@@ -5,8 +5,12 @@
 # them appropriately. You can do this in whatever manner you
 # wish as long as you match the given test cases.
 
+LETTERS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
 POINTS = dict(A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N=1, O=1, P=3, Q=10, R=1, S=1, T=1, U=1,
               V=4, W=4, X=8, Y=4, Z=10, _=0)
+for L in LETTERS:
+    POINTS[L.lower()] = 0
 
 
 def bonus_template(quadrant):
@@ -77,8 +81,9 @@ WORDS, PREFIXES = readwordlist('words4k.txt')
 class anchor(set):
     "An anchor is where a new word can be placed; has a set of allowable letters."
 
+    def __str__(self): return '.'
 
-LETTERS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
 ANY = anchor(LETTERS)  # The anchor that can be any letter
 
 
@@ -94,17 +99,22 @@ def is_empty(sq):
 def add_suffixes(hand, pre, start, row, results, anchored=True):
     "Add all possible suffixes, and accumulate (start, word) pairs in results."
     i = start + len(pre)
-    if pre in WORDS and anchored and not is_letter(row[i]):
+    if pre.upper() in WORDS and anchored and not is_letter(row[i]):
         results.add((start, pre))
-    if pre in PREFIXES:
+    if pre.upper() in PREFIXES:
         sq = row[i]
         if is_letter(sq):
             add_suffixes(hand, pre + sq, start, row, results)
         elif is_empty(sq):
             possibilities = sq if isinstance(sq, set) else ANY
             for L in hand:
-                if L in possibilities:
-                    add_suffixes(hand.replace(L, '', 1), pre + L, start, row, results)
+                if L == '_':
+                    letters = set(map(lambda x: x.lower(), LETTERS))
+                else:
+                    letters = {L}
+                for letter in letters:
+                    if letter.upper() in possibilities:
+                        add_suffixes(hand.replace(L, '', 1), pre + letter, start, row, results)
     return results
 
 
@@ -253,7 +263,7 @@ def make_play(play, board):
     "Put the word down on the board."
     (score, (i, j), (di, dj), word) = play
     for (n, L) in enumerate(word):
-        board[j + n * dj][i + n * di] = L
+        board[j + n * dj][i + n * di] = L.upper()
     return board
 
 
@@ -263,25 +273,48 @@ NOPLAY = None
 def best_play(hand, board):
     "Return the highest-scoring play.  Or None."
     plays = all_plays(hand, board)
+    # for play in plays:
+    #     print(play)
     return sorted(plays)[-1] if plays else NOPLAY
 
 
 def a_board():
     return list(map(list, ['|||||||||||||||||',
-                      '|J............I.|',
-                      '|A.....BE.C...D.|',
-                      '|GUY....F.H...L.|',
-                      '|||||||||||||||||']))
+                           '|J............I.|',
+                           '|A.....BE.C...D.|',
+                           '|GUY....F.H...L.|',
+                           '|||||||||||||||||']))
+
+
+def show(board, bonus=BONUS):
+    "Print the board."
+    ###Your code here.
+    for row, bonus_row in zip(board, bonus):
+        print(' '.join(sq if is_letter(sq) else sqb for sq, sqb in zip(row, bonus_row)))
+
+
+DEBUG_TEST_RUN = True
 
 
 def test():
     def ok(hand, n, s, d, w):
-        result = best_play(hand, a_board())
+        board = a_board()
+        result = best_play(hand, board)
         test_case = result[:3] == (n, s, d) and result[-1].upper() == w.upper()
+        # if not test_case:
+        if DEBUG_TEST_RUN:
+            show(board)
+            print(hand)
+            new_board = make_play(result, board)
+            show(new_board)
+            print((n, s, d, w))
+            print(result)
         return test_case
 
     assert ok('ABCEHKN', 64, (3, 2), (1, 0), 'BACKBENCH')
     assert ok('_BCEHKN', 62, (3, 2), (1, 0), 'BaCKBENCH')
     assert ok('__CEHKN', 61, (9, 1), (1, 0), 'KiCk')
+    return 'tests pass'
+
 
 print(test())
