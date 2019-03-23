@@ -6,11 +6,12 @@
 # wish as long as you match the given test cases.
 
 LETTERS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+LOWER_LETTERS = list(map(lambda x: x.lower(), LETTERS))
 
 POINTS = dict(A=1, B=3, C=3, D=2, E=1, F=4, G=2, H=4, I=1, J=8, K=5, L=1, M=3, N=1, O=1, P=3, Q=10, R=1, S=1, T=1, U=1,
               V=4, W=4, X=8, Y=4, Z=10, _=0)
-for L in LETTERS:
-    POINTS[L.lower()] = 0
+for L in LOWER_LETTERS:
+    POINTS[L] = 0
 
 
 def bonus_template(quadrant):
@@ -52,9 +53,15 @@ DW, TW, DL, TL = '23:;'
 
 def removed(letters, remove):
     "Return a str of letters, but with each letter in remove removed once."
+    result = letters
     for L in remove:
-        letters = letters.replace(L, '', 1)
-    return letters
+        if L in result:
+            result = result.replace(L, '', 1)
+        elif '_' in result:
+            result = result.replace('_', '', 1)
+        else:
+            raise ValueError("No '%s' to remove in '%s'" % (L, letters))
+    return result
 
 
 def prefixes(word):
@@ -99,9 +106,10 @@ def is_empty(sq):
 def add_suffixes(hand, pre, start, row, results, anchored=True):
     "Add all possible suffixes, and accumulate (start, word) pairs in results."
     i = start + len(pre)
-    if pre.upper() in WORDS and anchored and not is_letter(row[i]):
+    PRE = pre.upper()
+    if PRE in WORDS and anchored and not is_letter(row[i]):
         results.add((start, pre))
-    if pre.upper() in PREFIXES:
+    if PRE in PREFIXES:
         sq = row[i]
         if is_letter(sq):
             add_suffixes(hand, pre + sq, start, row, results)
@@ -109,7 +117,7 @@ def add_suffixes(hand, pre, start, row, results, anchored=True):
             possibilities = sq if isinstance(sq, set) else ANY
             for L in hand:
                 if L == '_':
-                    letters = set(map(lambda x: x.lower(), LETTERS))
+                    letters = LOWER_LETTERS
                 else:
                     letters = {L}
                 for letter in letters:
@@ -139,12 +147,19 @@ def find_prefixes(hand, pre='', results=None):
     global prev_hand, prev_results
     if hand == prev_hand: return prev_results
     if results is None: results = set()
-    if pre == '': prev_hand, prev_results = hand, results
+    if pre == '':
+        prev_hand, prev_results = hand, results
     # Now do the computation
-    if pre in WORDS or pre in PREFIXES: results.add(pre)
-    if pre in PREFIXES:
+    PRE = pre.upper()
+    if PRE in WORDS or PRE in PREFIXES: results.add(pre)
+    if PRE in PREFIXES:
         for L in hand:
-            find_prefixes(hand.replace(L, '', 1), pre + L, results)
+            if L == '_':
+                letters = LOWER_LETTERS
+            else:
+                letters = {L}
+            for letter in letters:
+                find_prefixes(hand.replace(L, '', 1), pre + letter, results)
     return results
 
 
@@ -162,8 +177,7 @@ def row_plays(hand, row):
                 for pre in find_prefixes(hand):
                     if len(pre) <= maxsize:
                         start = i - len(pre)
-                        add_suffixes(removed(hand, pre), pre, start, row, results,
-                                     anchored=False)
+                        add_suffixes(removed(hand, pre), pre, start, row, results, anchored=False)
     return results
 
 
@@ -209,7 +223,7 @@ def set_anchors(row, j, board):
                 row[i] = ANY
 
 
-def calculate_score(board, pos, direction, hand, word):
+def calculate_score(board, pos, direction, hand, word, bonus):
     "Return the total score for this play."
     total, crosstotal, word_mult = 0, 0, 1
     starti, startj = pos
@@ -218,43 +232,43 @@ def calculate_score(board, pos, direction, hand, word):
     for (n, L) in enumerate(word):
         i, j = starti + n * di, startj + n * dj
         sq = board[j][i]
-        b = BONUS[j][i]
+        b = bonus[j][i]
         word_mult *= (1 if is_letter(sq) else
                       3 if b == TW else 2 if b in (DW, '*') else 1)
         letter_mult = (1 if is_letter(sq) else
                        3 if b == TL else 2 if b == DL else 1)
         total += POINTS[L] * letter_mult
         if isinstance(sq, set) and sq is not ANY and direction is not DOWN:
-            crosstotal += cross_word_score(board, L, (i, j), other_direction)
+            crosstotal += cross_word_score(board, L, (i, j), other_direction, bonus)
     return crosstotal + word_mult * total
 
 
-def cross_word_score(board, L, pos, direction):
+def cross_word_score(board, L, pos, direction, bonus):
     "Return the score of a word made in the other direction from the main word."
     i, j = pos
     (j2, word) = find_cross_word(board, i, j)
-    return calculate_score(board, (i, j2), DOWN, L, word.replace('.', L))
+    return calculate_score(board, (i, j2), DOWN, L, word.replace('.', L), bonus)
 
 
 ACROSS, DOWN = (1, 0), (0, 1)  # Directions that words can go
 
 
-def horizontal_plays(hand, board):
+def horizontal_plays(hand, board, bonus):
     "Find all horizontal plays -- (score, pos, word) pairs -- across all rows."
     results = set()
     for (j, row) in enumerate(board[1:-1], 1):
         set_anchors(row, j, board)
         for (i, word) in row_plays(hand, row):
-            score = calculate_score(board, (i, j), ACROSS, hand, word)
+            score = calculate_score(board, (i, j), ACROSS, hand, word, bonus)
             results.add((score, (i, j), word))
     return results
 
 
-def all_plays(hand, board):
+def all_plays(hand, board, bonus):
     """All plays in both directions. A play is a (score, pos, dir, word) tuple,
     where pos is an (i, j) pair, and dir is a (delta-_i, delta_j) pair."""
-    hplays = horizontal_plays(hand, board)
-    vplays = horizontal_plays(hand, transpose(board))
+    hplays = horizontal_plays(hand, board, bonus)
+    vplays = horizontal_plays(hand, transpose(board), transpose(bonus))
     return (set((score, (i, j), ACROSS, w) for (score, (i, j), w) in hplays) |
             set((score, (i, j), DOWN, w) for (score, (j, i), w) in vplays))
 
@@ -270,9 +284,9 @@ def make_play(play, board):
 NOPLAY = None
 
 
-def best_play(hand, board):
+def best_play(hand, board, bonus=BONUS):
     "Return the highest-scoring play.  Or None."
-    plays = all_plays(hand, board)
+    plays = all_plays(hand, board, bonus)
     # for play in plays:
     #     print(play)
     return sorted(plays)[-1] if plays else NOPLAY
@@ -286,27 +300,43 @@ def a_board():
                            '|||||||||||||||||']))
 
 
+def b_board():
+    return list(map(list, ['|||||||||||||||||',
+                           '|...............|',
+                           '|...............|',
+                           '|..............A|',
+                           '|||||||||||||||||']))
+
+
+def b_bonus():
+    return list(['|||||||||||||||||',
+                 '|..............3|',
+                 '|...............|',
+                 '|...........2.2.|',
+                 '|||||||||||||||||'])
+
+
 def show(board, bonus=BONUS):
     "Print the board."
-    ###Your code here.
     for row, bonus_row in zip(board, bonus):
         print(' '.join(sq if is_letter(sq) else sqb for sq, sqb in zip(row, bonus_row)))
 
 
-DEBUG_TEST_RUN = True
+DEBUG_TEST_RUN = False
 
 
 def test():
-    def ok(hand, n, s, d, w):
-        board = a_board()
-        result = best_play(hand, board)
+    def ok(hand, n, s, d, w, board=None, bonus=BONUS):
+        if board is None:
+            board = a_board()
+        result = best_play(hand, board, bonus)
         test_case = result[:3] == (n, s, d) and result[-1].upper() == w.upper()
         # if not test_case:
-        if DEBUG_TEST_RUN:
-            show(board)
+        if DEBUG_TEST_RUN or not test_case:
+            show(board, bonus)
             print(hand)
             new_board = make_play(result, board)
-            show(new_board)
+            show(new_board, bonus)
             print((n, s, d, w))
             print(result)
         return test_case
@@ -314,6 +344,10 @@ def test():
     assert ok('ABCEHKN', 64, (3, 2), (1, 0), 'BACKBENCH')
     assert ok('_BCEHKN', 62, (3, 2), (1, 0), 'BaCKBENCH')
     assert ok('__CEHKN', 61, (9, 1), (1, 0), 'KiCk')
+    assert ok('_', 2, (14, 3), (1, 0), 'yA', board=b_board(), bonus=b_bonus())
+    assert ok('__', 3, (15, 1), (0, 1), 'zoA', board=b_board(), bonus=b_bonus())
+    assert ok('___', 4, (12, 3), (1, 0), 'ideA', board=b_board(), bonus=b_bonus())
+    assert ok('__Q', 44, (12, 3), (1, 0), 'aQuA', board=b_board(), bonus=b_bonus())
     return 'tests pass'
 
 
