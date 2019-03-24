@@ -8,6 +8,30 @@
 def boggle_words(board, minlength=3):
     "Find all the words on this Boggle board; return as a set of words."
     # your code here
+    N = size(board)
+    result = set()
+    for pos in range(len(board)):
+        find_prefixes(board, N, pos, '', result, minlength)
+    return result
+
+
+def find_prefixes(board, N, pos, prefix, result, minlenght):
+    if prefix in WORDS and len(prefix) >= minlenght:
+        result.add(prefix)
+    if prefix not in PREFIXES:
+        return
+    if pos < 0 or pos >= len(board):
+        return
+    if board[pos] == BORDER:
+        return
+    letter = board[pos]
+    marked_board = mark_used_position(board, pos)
+    for neighbor in neighbors(pos, N):
+        find_prefixes(marked_board, N, neighbor, prefix + letter, result, minlenght)
+
+
+def mark_used_position(board, pos):
+    return board[:pos] + BORDER + board[pos + 1:]
 
 
 def test():
@@ -83,4 +107,3 @@ def readwordlist(filename):
 WORDS, PREFIXES = readwordlist('words4k.txt')
 
 print(test())
-
