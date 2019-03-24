@@ -33,20 +33,52 @@ For example, bowling([10, 7, 3, ...]) means that you get a strike, you score
 
 """
 
+
 def bowling(balls):
     "Compute the total score for a player's game of bowling."
+
     ## bowling([int, ...]) -> int
     ## your code here
+    def strike(index):
+        return balls[index] == 10
+
+    def strike_bonux(index):
+        return balls[index + 1] + balls[index + 2]
+
+    def spare(index):
+        return balls[index] + balls[index + 1] == 10
+
+    def spare_bonux(index):
+        return balls[index + 2]
+
+    def no_bonus_score(index):
+        return balls[index] + balls[index + 1]
+
+    score = 0
+    index = 0
+    for frame in range(10):
+        if strike(index):
+            score += 10 + strike_bonux(index)
+            index += 1
+        elif spare(index):
+            score += 10 + spare_bonux(index)
+            index += 2
+        else:
+            score += no_bonus_score(index)
+            index += 2
+    return score
 
 
 def test_bowling():
-    assert   0 == bowling([0] * 20)
-    assert  20 == bowling([1] * 20)
-    assert  80 == bowling([4] * 20)
-    assert 190 == bowling([9,1] * 10 + [9])
+    assert 0 == bowling([0] * 20)
+    assert 20 == bowling([1] * 20)
+    assert 80 == bowling([4] * 20)
+    assert 190 == bowling([9, 1] * 10 + [9])
     assert 300 == bowling([10] * 12)
-    assert 200 == bowling([10, 5,5] * 5 + [10])
-    assert  11 == bowling([0,0] * 9 + [10,1,0])
-    assert  12 == bowling([0,0] * 8 + [10, 1,0])
+    assert 200 == bowling([10, 5, 5] * 5 + [10])
+    assert 11 == bowling([0, 0] * 9 + [10, 1, 0])
+    assert 12 == bowling([0, 0] * 8 + [10, 1, 0])
+    return 'tests pass'
 
-test_bowling()
+
+print(test_bowling())
