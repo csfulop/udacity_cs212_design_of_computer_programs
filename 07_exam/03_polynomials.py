@@ -30,8 +30,8 @@ we will store the coefficients in the .coefs attribute of the function, so we ha
 And finally, the name of the function will be the formula given above, so you should
 have something like this:
 
-    >>> p1
-    <function 30 * x**2 + 20 * x + 10 at 0x100d71c08>
+    # >>> p1
+    # <function 30 * x**2 + 20 * x + 10 at 0x100d71c08>
 
     >>> p1.__name__
     '30 * x**2 + 20 * x + 10'
@@ -49,14 +49,81 @@ Your task is to write the function poly and the following additional functions:
 
 They are described below; see the test_poly function for examples.
 """
+from itertools import zip_longest
 
 
-def poly(coefs):
+class poly(object):
     """Return a function that represents the polynomial with these coefficients.
     For example, if coefs=(10, 20, 30), return the function of x that computes
     '30 * x**2 + 20 * x + 10'.  Also store the coefs on the .coefs attribute of
     the function, and the str of the formula on the .__name__ attribute.'"""
-    # your code here (I won't repeat "your code here"; there's one for each function)
+
+    def __init__(self, coefs):
+        self.coefs = coefs
+        self.__name__ = self._create_name()
+
+    def __repr__(self):
+        return '<polinomial ' + self.__name__ + '>'
+
+    def _create_name(self):
+        name_parts = []
+        for degree, coefficient in reversed(list(enumerate(self.coefs))):
+            if coefficient == 0: continue
+            if degree == 1 and coefficient == 1:
+                part = 'x'
+            elif degree == 1:
+                part = '%d * x' % coefficient
+            elif degree == 0:
+                part = '%d' % coefficient
+            elif coefficient == 1:
+                part = 'x**%d' % degree
+            else:
+                part = '%d * x**%d' % (coefficient, degree)
+            name_parts.append(part)
+        return ' + '.join(name_parts).replace('+ -', '- ')
+
+    def __call__(self, x):
+        result = 0
+        for degree, coefficient in enumerate(self.coefs):
+            result += coefficient * x ** degree
+        return result
+
+    def __add__(self, other):
+        if is_poly(other):
+            return add(self, other)
+        else:
+            return add(self, poly((other,)))
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if is_poly(other):
+            return sub(self, other)
+        else:
+            return sub(self, poly((other,)))
+
+    def __rsub__(self, other):
+        if is_poly(other):
+            return sub(other, self)
+        else:
+            return poly((other,)) - self
+
+    def __mul__(self, other):
+        if is_poly(other):
+            return mul(self, other)
+        else:
+            return mul(self, poly((other,)))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __pow__(self, n, modulo=None):
+        return power(self, n)
+
+    def __eq__(self, other):
+        if not is_poly(other): return False
+        return self.coefs == other.coefs
 
 
 def test_poly():
@@ -68,24 +135,29 @@ def test_poly():
         assert p1(x) == 30 * x ** 2 + 20 * x + 10
     assert same_name(p1.__name__, '30 * x**2 + 20 * x + 10')
 
+    assert same_name(poly((-10, -20, -30)).__name__, '-30 * x**2 - 20 * x - 10')
+
     assert is_poly(p1)
     assert not is_poly(abs) and not is_poly(42) and not is_poly('cracker')
 
     p3 = poly((0, 0, 0, 1))
     assert p3.__name__ == 'x**3'
-    p9 = mul(p3, mul(p3, p3))
-    assert p9(2) == 512
+
+    assert add(poly((10, 20, 30)), poly((1, 2, 3))).coefs == (11, 22, 33)
     p4 = add(p1, p3)
     assert same_name(p4.__name__, 'x**3 + 30 * x**2 + 20 * x + 10')
+
+    assert mul(poly((10, 20, 30)), poly((1, 2, 3))).coefs == (10, 40, 100, 120, 90)
+
+    p9 = mul(p3, mul(p3, p3))
+    assert p9(2) == 512
 
     assert same_name(poly((1, 1)).__name__, 'x + 1')
     assert same_name(power(poly((1, 1)), 10).__name__,
                      'x**10 + 10 * x**9 + 45 * x**8 + 120 * x**7 + 210 * x**6 + 252 * x**5 + 210' +
                      ' * x**4 + 120 * x**3 + 45 * x**2 + 10 * x + 1')
 
-    assert add(poly((10, 20, 30)), poly((1, 2, 3))).coefs == (11, 22, 33)
     assert sub(poly((10, 20, 30)), poly((1, 2, 3))).coefs == (9, 18, 27)
-    assert mul(poly((10, 20, 30)), poly((1, 2, 3))).coefs == (10, 40, 100, 120, 90)
     assert power(poly((1, 1)), 2).coefs == (1, 2, 1)
     assert power(poly((1, 1)), 10).coefs == (1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1)
 
@@ -98,6 +170,7 @@ def test_poly():
     assert same_name(deriv(p5).__name__, '25 * x**4 + 16 * x**3 + 9 * x**2 + 4 * x + 1')
     assert deriv(p5)(1) == 55
     assert deriv(p5)(2) == 573
+    return 'tests pass'
 
 
 def same_name(name1, name2):
@@ -112,22 +185,37 @@ def same_name(name1, name2):
 def is_poly(x):
     "Return true if x is a poly (polynomial)."
     ## For examples, see the test_poly function
+    return hasattr(x, 'coefs')
 
 
 def add(p1, p2):
     "Return a new polynomial which is the sum of polynomials p1 and p2."
+    result = []
+    for c1, c2 in zip_longest(p1.coefs, p2.coefs):
+        result.append(c2 if c1 is None else c1 if c2 is None else c1 + c2)
+    return poly(tuple(result))
 
 
 def sub(p1, p2):
     "Return a new polynomial which is the difference of polynomials p1 and p2."
+    return add(p1, mul(p2, poly((-1,))))
 
 
 def mul(p1, p2):
     "Return a new polynomial which is the product of polynomials p1 and p2."
+    result = poly((0,))
+    for degree1, coefficient1 in enumerate(p1.coefs):
+        p = poly(tuple(coefficient1 * x for x in ((0,) * degree1 + p2.coefs)))
+        result = add(result, p)
+    return result
 
 
 def power(p, n):
     "Return a new polynomial which is p to the nth power (n a non-negative integer)."
+    result = poly((1,))
+    for _ in range(n):
+        result = mul(result, p)
+    return result
 
 
 """
@@ -145,10 +233,18 @@ to the function integral (withh default C=0).
 
 def deriv(p):
     "Return the derivative of a function p (with respect to its argument)."
+    result = []
+    for i in range(1, len(p.coefs)):
+        result.append(p.coefs[i] * i)
+    return poly(tuple(result))
 
 
 def integral(p, C=0):
     "Return the integral of a function p (with respect to its argument)."
+    result = [C]
+    for i in range(len(p.coefs)):
+        result.append(p.coefs[i] / (i + 1))
+    return poly(tuple(result))
 
 
 """
@@ -174,6 +270,7 @@ def test_poly1():
     assert p1(100) == newp1(100)  # The new poly objects are still callable.
     assert same_name(p1.__name__, newp1.__name__)
     assert (x + 1) * (x - 1) == x ** 2 - 1 == poly((-1, 0, 1))
+    return 'test_poly1 pass'
 
 
 def test_poly2():
@@ -181,3 +278,6 @@ def test_poly2():
     assert p1(100) == newp1(100)
     assert same_name(p1.__name__, newp1.__name__)
 
+
+print(test_poly())
+print(test_poly1())
