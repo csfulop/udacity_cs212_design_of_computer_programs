@@ -32,6 +32,9 @@ but you cannot choose ['T20', 'D10', 'D10'].
 
 def test_darts():
     "Test the double_out function."
+    assert double_out(20, length=0) == None
+    assert double_out(20, length=1) == ['D10']
+    assert double_out(20, length=2) == ['D10']
     assert double_out(170) == ['T20', 'T20', 'DB']
     assert double_out(171) == None
     assert double_out(100) in (['T20', 'D20'], ['DB', 'DB'])
@@ -57,12 +60,33 @@ we must choose a double for the last dart, but for the others I prefer the
 easiest targets first: 'S' is easiest, then 'T', then 'D'.
 """
 
+BONUS_VALUE = {'S': 1, 'D': 2, 'T': 3}
+SECTIONS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
+POINTS = {bonus_name + str(section): section * bonus_value
+          for section in SECTIONS
+          for bonus_name, bonus_value in BONUS_VALUE.items()}
+BULL = 25
+POINTS.update({bonus_name + 'B': BULL * bonus_value
+               for bonus_name, bonus_value in BONUS_VALUE.items() if bonus_name != 'T'})
 
-def double_out(total):
+
+def double_out(total, length=3, path=None):
     """Return a shortest possible list of targets that add to total,
     where the length <= 3 and the final element is a double.
     If there is no solution, return None."""
     # your code here
+    if path is None:
+        path = []
+    if length <= 0:
+        return None
+    for name, point in sorted(POINTS.items(), key=lambda x: x[1], reverse=True):
+        if point == total and name[0] == 'D':
+            return path + [name]
+        elif point < total:
+            result = double_out(total - point, length=length - 1, path=path + [name])
+            if result:
+                return result
+    return None
 
 
 """
@@ -156,6 +180,7 @@ def test_darts2():
          'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
          'S7': 0.016, 'SB': 0.64}))
     return 'test_darts2 pass'
+
 
 print(test_darts())
 print(test_darts2())
