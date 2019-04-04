@@ -28,6 +28,7 @@ shortest possible list, but you have your choice of which one. For
 example, for total=100, you can choose ['T20', 'D20'] or ['DB', 'DB']
 but you cannot choose ['T20', 'D10', 'D10'].
 """
+from math import isclose
 
 
 def test_darts():
@@ -151,6 +152,36 @@ no guarantee that the game will end in a finite number of moves.
 def outcome(target, miss):
     "Return a probability distribution of [(target, probability)] pairs."
     # your code here
+    result = {t: 0 for t in POINTS.keys()}
+    result = _ring_accuracy(target, miss, result)
+    return result
+
+
+def _ring_accuracy(target, miss, result):
+    if target == 'SB':
+        result[target] = 1 - miss
+        result['DB'] = miss / 4.0
+        for section in SECTIONS:
+            result['S' + str(section)] = miss * 3 / 4.0 / len(SECTIONS)
+    elif target == 'DB':
+        result[target] = 1 - 3 * miss
+        result['SB'] = miss
+        for section in SECTIONS:
+            result['S' + str(section)] = miss * 2 / len(SECTIONS)
+    elif target[0] == 'S':
+        result[target] = (1 - miss / 5.0)
+        result['T' + target[1:]] = miss / 10.0
+        result['D' + target[1:]] = miss / 10.0
+    elif target[0] == 'D':
+        result[target] = 1 - miss
+        result['S' + target[1:]] = miss / 2.0
+        result['OFF'] = miss / 2.0
+    elif target[0] == 'T':
+        result[target] = 1 - miss
+        result['S' + target[1:]] = miss
+    else:
+        raise ValueError(target)
+    return result
 
 
 def best_target(miss):
@@ -165,6 +196,32 @@ def same_outcome(dict1, dict2):
 
 
 def test_darts2():
+    o1 = outcome('S20', miss=0.1)
+    assert o1['S20'] == 0.98
+    assert o1['D20'] == 0.01
+    assert o1['T20'] == 0.01
+
+    o2 = outcome('D20', miss=0.1)
+    assert o2['D20'] == 0.9
+    assert o2['S20'] == 0.05
+    assert o2['OFF'] == 0.05
+
+    o3 = outcome('T20', miss=0.1)
+    assert o3['T20'] == 0.9
+    assert o3['S20'] == 0.1
+
+    o4 = outcome('SB', miss=0.1)
+    assert o4['SB'] == 0.9
+    assert o4['DB'] == 0.025
+    for section in SECTIONS:
+        assert isclose(o4['S%d' % section], 0.00375, rel_tol=1e-10)
+
+    o5 = outcome('DB', miss=0.1)
+    assert o5['DB'] == 0.7
+    assert o5['SB'] == 0.1
+    for section in SECTIONS:
+        assert isclose(o5['S%d' % section], 0.01, rel_tol=1e-10)
+
     assert best_target(0.0) == 'T20'
     assert best_target(0.1) == 'T20'
     assert best_target(0.4) == 'T19'
