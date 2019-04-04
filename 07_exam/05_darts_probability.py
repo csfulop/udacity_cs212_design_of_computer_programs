@@ -28,6 +28,7 @@ shortest possible list, but you have your choice of which one. For
 example, for total=100, you can choose ['T20', 'D20'] or ['DB', 'DB']
 but you cannot choose ['T20', 'D10', 'D10'].
 """
+from copy import copy
 from math import isclose
 
 
@@ -62,9 +63,10 @@ easiest targets first: 'S' is easiest, then 'T', then 'D'.
 """
 
 BONUS_VALUE = {'S': 1, 'D': 2, 'T': 3}
-SECTIONS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
-POINTS = {bonus_name + str(section): section * bonus_value
-          for section in SECTIONS
+SECTION_VALUES = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
+SECTIONS = [str(x) for x in SECTION_VALUES]
+POINTS = {bonus_name + section: section_value * bonus_value
+          for (section, section_value) in zip(SECTIONS, SECTION_VALUES)
           for bonus_name, bonus_value in BONUS_VALUE.items()}
 BULL = 25
 POINTS.update({bonus_name + 'B': BULL * bonus_value
@@ -154,6 +156,7 @@ def outcome(target, miss):
     # your code here
     result = {t: 0 for t in POINTS.keys()}
     result = _ring_accuracy(target, miss, result)
+    result = _section_accuracy(target, miss, result)
     return result
 
 
@@ -162,12 +165,12 @@ def _ring_accuracy(target, miss, result):
         result[target] = 1 - miss
         result['DB'] = miss / 4.0
         for section in SECTIONS:
-            result['S' + str(section)] = miss * 3 / 4.0 / len(SECTIONS)
+            result['S' + section] = miss * 3 / 4.0 / len(SECTIONS)
     elif target == 'DB':
         result[target] = 1 - 3 * miss
         result['SB'] = miss
         for section in SECTIONS:
-            result['S' + str(section)] = miss * 2 / len(SECTIONS)
+            result['S' + section] = miss * 2 / len(SECTIONS)
     elif target[0] == 'S':
         result[target] = (1 - miss / 5.0)
         result['T' + target[1:]] = miss / 10.0
@@ -184,6 +187,24 @@ def _ring_accuracy(target, miss, result):
     return result
 
 
+def _section_accuracy(target, miss, result):
+    next_result = copy(result)
+    if target in ('SB', 'DB'):
+        pass
+    else:
+        for target in result.keys():
+            if target == 'OFF': continue
+            if result[target] > 0:
+                p = result[target]
+                next_result[target] = p * (1 - miss)
+                i = SECTIONS.index(target[1:])
+                miss_target = target[0] + SECTIONS[(i + 1) % len(SECTIONS)]
+                next_result[miss_target] += p * miss / 2.0
+                miss_target = target[0] + SECTIONS[i - 1]
+                next_result[miss_target] += p * miss / 2.0
+    return next_result
+
+
 def best_target(miss):
     "Return the target that maximizes the expected score."
     # your code here
@@ -197,30 +218,61 @@ def same_outcome(dict1, dict2):
 
 def test_darts2():
     o1 = outcome('S20', miss=0.1)
-    assert o1['S20'] == 0.98
-    assert o1['D20'] == 0.01
-    assert o1['T20'] == 0.01
+    _assert_sum_probability(o1)
+    _close(o1['S20'], 0.882)
+    _close(o1['D20'], 0.009)
+    _close(o1['T20'], 0.009)
+    _close(o1['S1'], 0.049)
+    _close(o1['D1'], 0.0005)
+    _close(o1['T1'], 0.0005)
+    _close(o1['S5'], 0.049)
+    _close(o1['D5'], 0.0005)
+    _close(o1['T5'], 0.0005)
+
+    o6 = outcome('S5', miss=0.1)
+    _assert_sum_probability(o6)
+    _close(o6['S5'], 0.882)
+    _close(o6['D5'], 0.009)
+    _close(o6['T5'], 0.009)
+    _close(o6['S20'], 0.049)
+    _close(o6['D20'], 0.0005)
+    _close(o6['T20'], 0.0005)
+    _close(o6['S12'], 0.049)
+    _close(o6['D12'], 0.0005)
+    _close(o6['T12'], 0.0005)
 
     o2 = outcome('D20', miss=0.1)
-    assert o2['D20'] == 0.9
-    assert o2['S20'] == 0.05
-    assert o2['OFF'] == 0.05
+    _assert_sum_probability(o2)
+    _close(o2['D20'], 0.81)
+    _close(o2['D1'], 0.045)
+    _close(o2['D5'], 0.045)
+    _close(o2['S20'], 0.045)
+    _close(o2['S1'], 0.0025)
+    _close(o2['S5'], 0.0025)
+    _close(o2['OFF'], 0.05)
 
     o3 = outcome('T20', miss=0.1)
-    assert o3['T20'] == 0.9
-    assert o3['S20'] == 0.1
+    _assert_sum_probability(o3)
+    _close(o3['T20'], 0.81)
+    _close(o3['T1'], 0.045)
+    _close(o3['T5'], 0.045)
+    _close(o3['S20'], 0.09)
+    _close(o3['S1'], 0.005)
+    _close(o3['S5'], 0.005)
 
     o4 = outcome('SB', miss=0.1)
+    _assert_sum_probability(o4)
     assert o4['SB'] == 0.9
     assert o4['DB'] == 0.025
     for section in SECTIONS:
-        assert isclose(o4['S%d' % section], 0.00375, rel_tol=1e-10)
+        _close(o4['S%s' % section], 0.00375)
 
     o5 = outcome('DB', miss=0.1)
+    _assert_sum_probability(o5)
     assert o5['DB'] == 0.7
     assert o5['SB'] == 0.1
     for section in SECTIONS:
-        assert isclose(o5['S%d' % section], 0.01, rel_tol=1e-10)
+        _close(o5['S%s' % section], 0.01)
 
     assert best_target(0.0) == 'T20'
     assert best_target(0.1) == 'T20'
@@ -237,6 +289,14 @@ def test_darts2():
          'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
          'S7': 0.016, 'SB': 0.64}))
     return 'test_darts2 pass'
+
+
+def _close(a, b):
+    assert isclose(a, b, rel_tol=1e-10)
+
+
+def _assert_sum_probability(res):
+    _close(sum(res.values()), 1)
 
 
 print(test_darts())
