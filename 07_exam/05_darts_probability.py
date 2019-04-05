@@ -31,9 +31,12 @@ but you cannot choose ['T20', 'D10', 'D10'].
 from copy import copy
 from math import isclose
 
+from hamcrest import assert_that, is_
+
 
 def test_darts():
     "Test the double_out function."
+    print(TARGETS)
     assert double_out(20, length=0) == None
     assert double_out(20, length=1) == ['D10']
     assert double_out(20, length=2) == ['D10']
@@ -65,12 +68,12 @@ easiest targets first: 'S' is easiest, then 'T', then 'D'.
 BONUS_VALUE = {'S': 1, 'D': 2, 'T': 3}
 SECTION_VALUES = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]
 SECTIONS = [str(x) for x in SECTION_VALUES]
-POINTS = {bonus_name + section: section_value * bonus_value
-          for (section, section_value) in zip(SECTIONS, SECTION_VALUES)
-          for bonus_name, bonus_value in BONUS_VALUE.items()}
+TARGETS = {bonus_name + section: section_value * bonus_value
+           for (section, section_value) in zip(SECTIONS, SECTION_VALUES)
+           for bonus_name, bonus_value in BONUS_VALUE.items()}
 BULL = 25
-POINTS.update({bonus_name + 'B': BULL * bonus_value
-               for bonus_name, bonus_value in BONUS_VALUE.items() if bonus_name != 'T'})
+TARGETS.update({bonus_name + 'B': BULL * bonus_value
+                for bonus_name, bonus_value in BONUS_VALUE.items() if bonus_name in ('S', 'D')})
 
 
 def double_out(total, length=3, path=None):
@@ -82,7 +85,7 @@ def double_out(total, length=3, path=None):
         path = []
     if length <= 0:
         return None
-    for name, point in sorted(POINTS.items(), key=lambda x: x[1], reverse=True):
+    for name, point in sorted(TARGETS.items(), key=lambda x: x[1], reverse=True):
         if point == total and name[0] == 'D':
             return path + [name]
         elif point < total:
@@ -154,7 +157,7 @@ no guarantee that the game will end in a finite number of moves.
 def outcome(target, miss):
     "Return a probability distribution of [(target, probability)] pairs."
     # your code here
-    result = {t: 0 for t in POINTS.keys()}
+    result = {target: 0 for target in TARGETS.keys()}
     result = _ring_accuracy(target, miss, result)
     result = _section_accuracy(target, miss, result)
     return result
@@ -190,24 +193,34 @@ def _ring_accuracy(target, miss, result):
 def _section_accuracy(target, miss, result):
     next_result = copy(result)
     if target in ('SB', 'DB'):
-        pass
-    else:
-        for target in result.keys():
-            if target == 'OFF': continue
-            if result[target] > 0:
-                p = result[target]
-                next_result[target] = p * (1 - miss)
-                i = SECTIONS.index(target[1:])
-                miss_target = target[0] + SECTIONS[(i + 1) % len(SECTIONS)]
-                next_result[miss_target] += p * miss / 2.0
-                miss_target = target[0] + SECTIONS[i - 1]
-                next_result[miss_target] += p * miss / 2.0
+        # for t in ('SB', 'DB'):
+        #     p = result[t]
+        #     next_result[t] = p * (1 - miss)
+        return next_result
+
+    def update_neighbour(i):
+        miss_target = target[0] + SECTIONS[i % len(SECTIONS)]
+        next_result[miss_target] += p * miss / 2.0
+
+    for t in result.keys():
+        if t == 'OFF': continue
+        if result[t] > 0:
+            p = result[t]
+            next_result[t] = p * (1 - miss)
+            i = SECTIONS.index(t[1:])
+            update_neighbour(i + 1)
+            update_neighbour(i - 1)
     return next_result
 
 
 def best_target(miss):
     "Return the target that maximizes the expected score."
     # your code here
+    return max(TARGETS.keys(), key=lambda target: _expected_score(target, miss))
+
+
+def _expected_score(target, miss):
+    return sum(TARGETS.get(t, 0) * p for (t, p) in outcome(target, miss).items())
 
 
 def same_outcome(dict1, dict2):
@@ -218,6 +231,7 @@ def same_outcome(dict1, dict2):
 
 def test_darts2():
     o1 = outcome('S20', miss=0.1)
+    print(o1)
     _assert_sum_probability(o1)
     _close(o1['S20'], 0.882)
     _close(o1['D20'], 0.009)
@@ -281,13 +295,18 @@ def test_darts2():
     assert same_outcome(outcome('T20', 0.1),
                         {'T20': 0.81, 'S1': 0.005, 'T5': 0.045,
                          'S5': 0.005, 'T1': 0.045, 'S20': 0.09})
+    o7 = outcome('SB', 0.2)
+    print(o7)
+    expected = {'S9': 0.016, 'S8': 0.016, 'S3': 0.016, 'S2': 0.016, 'S1': 0.016,
+             'DB': 0.04, 'S6': 0.016, 'S5': 0.016, 'S4': 0.016, 'S20': 0.016,
+             'S19': 0.016, 'S18': 0.016, 'S13': 0.016, 'S12': 0.016, 'S11': 0.016,
+             'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
+             'S7': 0.016, 'SB': 0.64}
+    for t in TARGETS.keys():
+        print('%s: %s / %s' %(t,o7.get(t,0),expected.get(t,0)))
     assert (same_outcome(
-        outcome('SB', 0.2),
-        {'S9': 0.016, 'S8': 0.016, 'S3': 0.016, 'S2': 0.016, 'S1': 0.016,
-         'DB': 0.04, 'S6': 0.016, 'S5': 0.016, 'S4': 0.016, 'S20': 0.016,
-         'S19': 0.016, 'S18': 0.016, 'S13': 0.016, 'S12': 0.016, 'S11': 0.016,
-         'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
-         'S7': 0.016, 'SB': 0.64}))
+        o7,
+        expected))
     return 'test_darts2 pass'
 
 
