@@ -29,14 +29,10 @@ example, for total=100, you can choose ['T20', 'D20'] or ['DB', 'DB']
 but you cannot choose ['T20', 'D10', 'D10'].
 """
 from copy import copy
-from math import isclose
-
-from hamcrest import assert_that, is_
 
 
 def test_darts():
     "Test the double_out function."
-    print(TARGETS)
     assert double_out(20, length=0) == None
     assert double_out(20, length=1) == ['D10']
     assert double_out(20, length=2) == ['D10']
@@ -193,24 +189,30 @@ def _ring_accuracy(target, miss, result):
 def _section_accuracy(target, miss, result):
     next_result = copy(result)
     if target in ('SB', 'DB'):
-        # for t in ('SB', 'DB'):
-        #     p = result[t]
-        #     next_result[t] = p * (1 - miss)
-        return next_result
+        for board_target in ('SB', 'DB'):
+            p = result[board_target]
+            next_result[board_target] = p * (1 - miss)
+            for section in SECTIONS:
+                next_result['S' + section] += p * miss / len(SECTIONS)
+    else:
+        for board_target in result.keys():
+            def update_neighbour(i):
+                miss_target = board_target[0] + SECTIONS[i % len(SECTIONS)]
+                next_result[miss_target] += p * miss / 2.0
 
-    def update_neighbour(i):
-        miss_target = target[0] + SECTIONS[i % len(SECTIONS)]
-        next_result[miss_target] += p * miss / 2.0
-
-    for t in result.keys():
-        if t == 'OFF': continue
-        if result[t] > 0:
-            p = result[t]
-            next_result[t] = p * (1 - miss)
-            i = SECTIONS.index(t[1:])
-            update_neighbour(i + 1)
-            update_neighbour(i - 1)
+            if board_target == 'OFF': continue
+            if board_target[1] == 'B': continue
+            if result[board_target] > 0:
+                p = result[board_target]
+                next_result[board_target] = p * (1 - miss)
+                i = SECTIONS.index(section_of_target(board_target))
+                update_neighbour(i + 1)
+                update_neighbour(i - 1)
     return next_result
+
+
+def section_of_target(target):
+    return target[1:]
 
 
 def best_target(miss):
@@ -231,62 +233,46 @@ def same_outcome(dict1, dict2):
 
 def test_darts2():
     o1 = outcome('S20', miss=0.1)
-    print(o1)
     _assert_sum_probability(o1)
-    _close(o1['S20'], 0.882)
-    _close(o1['D20'], 0.009)
-    _close(o1['T20'], 0.009)
-    _close(o1['S1'], 0.049)
-    _close(o1['D1'], 0.0005)
-    _close(o1['T1'], 0.0005)
-    _close(o1['S5'], 0.049)
-    _close(o1['D5'], 0.0005)
-    _close(o1['T5'], 0.0005)
+    assert same_outcome(
+        o1,
+        {'S20': 0.882, 'D20': 0.009, 'T20': 0.009, 'S1': 0.049, 'D1': 0.0005, 'T1': 0.0005, 'S5': 0.049, 'D5': 0.0005,
+         'T5': 0.0005}
+    )
 
     o6 = outcome('S5', miss=0.1)
     _assert_sum_probability(o6)
-    _close(o6['S5'], 0.882)
-    _close(o6['D5'], 0.009)
-    _close(o6['T5'], 0.009)
-    _close(o6['S20'], 0.049)
-    _close(o6['D20'], 0.0005)
-    _close(o6['T20'], 0.0005)
-    _close(o6['S12'], 0.049)
-    _close(o6['D12'], 0.0005)
-    _close(o6['T12'], 0.0005)
+    assert same_outcome(
+        o6,
+        {'S5': 0.882, 'D5': 0.009, 'T5': 0.009, 'S20': 0.049, 'D20': 0.0005, 'T20': 0.0005, 'S12': 0.049, 'D12': 0.0005,
+         'T12': 0.0005}
+    )
 
     o2 = outcome('D20', miss=0.1)
     _assert_sum_probability(o2)
-    _close(o2['D20'], 0.81)
-    _close(o2['D1'], 0.045)
-    _close(o2['D5'], 0.045)
-    _close(o2['S20'], 0.045)
-    _close(o2['S1'], 0.0025)
-    _close(o2['S5'], 0.0025)
-    _close(o2['OFF'], 0.05)
+    assert same_outcome(
+        o2,
+        {'D20': 0.81, 'D1': 0.045, 'D5': 0.045, 'S20': 0.045, 'S1': 0.0025, 'S5': 0.0025, 'OFF': 0.05, }
+    )
 
     o3 = outcome('T20', miss=0.1)
     _assert_sum_probability(o3)
-    _close(o3['T20'], 0.81)
-    _close(o3['T1'], 0.045)
-    _close(o3['T5'], 0.045)
-    _close(o3['S20'], 0.09)
-    _close(o3['S1'], 0.005)
-    _close(o3['S5'], 0.005)
+    assert same_outcome(
+        o3,
+        {'T20': 0.81, 'T1': 0.045, 'T5': 0.045, 'S20': 0.09, 'S1': 0.005, 'S5': 0.005, }
+    )
 
     o4 = outcome('SB', miss=0.1)
     _assert_sum_probability(o4)
-    assert o4['SB'] == 0.9
-    assert o4['DB'] == 0.025
-    for section in SECTIONS:
-        _close(o4['S%s' % section], 0.00375)
+    expected4 = {'SB': 0.81, 'DB': 0.0225}
+    expected4.update({'S' + section: 0.008375 for section in SECTIONS})
+    assert same_outcome(o4, expected4)
 
     o5 = outcome('DB', miss=0.1)
     _assert_sum_probability(o5)
-    assert o5['DB'] == 0.7
-    assert o5['SB'] == 0.1
-    for section in SECTIONS:
-        _close(o5['S%s' % section], 0.01)
+    expected5 = {'SB': 0.09, 'DB': 0.63}
+    expected5.update({'S' + section: 0.014 for section in SECTIONS})
+    assert same_outcome(o5, expected5)
 
     assert best_target(0.0) == 'T20'
     assert best_target(0.1) == 'T20'
@@ -295,27 +281,18 @@ def test_darts2():
     assert same_outcome(outcome('T20', 0.1),
                         {'T20': 0.81, 'S1': 0.005, 'T5': 0.045,
                          'S5': 0.005, 'T1': 0.045, 'S20': 0.09})
-    o7 = outcome('SB', 0.2)
-    print(o7)
-    expected = {'S9': 0.016, 'S8': 0.016, 'S3': 0.016, 'S2': 0.016, 'S1': 0.016,
-             'DB': 0.04, 'S6': 0.016, 'S5': 0.016, 'S4': 0.016, 'S20': 0.016,
-             'S19': 0.016, 'S18': 0.016, 'S13': 0.016, 'S12': 0.016, 'S11': 0.016,
-             'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
-             'S7': 0.016, 'SB': 0.64}
-    for t in TARGETS.keys():
-        print('%s: %s / %s' %(t,o7.get(t,0),expected.get(t,0)))
     assert (same_outcome(
-        o7,
-        expected))
+        outcome('SB', 0.2),
+        {'S9': 0.016, 'S8': 0.016, 'S3': 0.016, 'S2': 0.016, 'S1': 0.016,
+         'DB': 0.04, 'S6': 0.016, 'S5': 0.016, 'S4': 0.016, 'S20': 0.016,
+         'S19': 0.016, 'S18': 0.016, 'S13': 0.016, 'S12': 0.016, 'S11': 0.016,
+         'S10': 0.016, 'S17': 0.016, 'S16': 0.016, 'S15': 0.016, 'S14': 0.016,
+         'S7': 0.016, 'SB': 0.64}))
     return 'test_darts2 pass'
 
 
-def _close(a, b):
-    assert isclose(a, b, rel_tol=1e-10)
-
-
 def _assert_sum_probability(res):
-    _close(sum(res.values()), 1)
+    assert abs(sum(res.values()) - 1) < 1e-10
 
 
 print(test_darts())
