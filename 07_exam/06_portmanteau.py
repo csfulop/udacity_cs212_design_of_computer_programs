@@ -51,26 +51,46 @@ input words. But you could implement a method that is efficient with a
 larger list of words.
 """
 
+
 def natalie(words):
     "Find the best Portmanteau word formed from any two of the list of words."
+    results = []
+    for word1 in words:
+        for word2 in words:
+            if word1 == word2: continue
+            max_len = 0
+            for i in range(1, min(len(word1), len(word2))):
+                if word1[-i:] == word2[:i]:
+                    max_len = i
+            if max_len > 0:
+                results.append((word1[:-max_len], word1[-max_len:], word2[max_len:]))
+    return ''.join(max(results, key=_value)) if results else None
+
+
+def _value(res):
+    a, b, c = res
+    total_len = len(a + b + c)
+    return total_len - abs(len(a) - total_len / 4) - abs(len(b) - total_len / 2) - abs(len(c) - total_len / 4)
+
 
 def test_natalie():
     "Some test cases for natalie"
-    assert natalie(['adolescent', 'scented', 'centennial', 'always', 'ado']) in ('adolescented','adolescentennial')
+    assert natalie(['adolescent', 'scented', 'centennial', 'always', 'ado']) in ('adolescented', 'adolescentennial')
     assert natalie(['eskimo', 'escort', 'kimchee', 'kimono', 'cheese']) == 'eskimono'
     assert natalie(['kimono', 'kimchee', 'cheese', 'serious', 'us', 'usage']) == 'kimcheese'
     assert natalie(['circus', 'elephant', 'lion', 'opera', 'phantom']) == 'elephantom'
     assert natalie(['programmer', 'coder', 'partying', 'merrymaking']) == 'programmerrymaking'
     assert natalie(['int', 'intimate', 'hinter', 'hint', 'winter']) == 'hintimate'
     assert natalie(['morass', 'moral', 'assassination']) == 'morassassination'
-    assert natalie(['entrepreneur', 'academic', 'doctor', 'neuropsychologist', 'neurotoxin', 'scientist', 'gist']) in ('entrepreneuropsychologist', 'entrepreneurotoxin')
+    assert natalie(['entrepreneur', 'academic', 'doctor', 'neuropsychologist', 'neurotoxin', 'scientist', 'gist']) in (
+        'entrepreneuropsychologist', 'entrepreneurotoxin')
     assert natalie(['perspicacity', 'cityslicker', 'capability', 'capable']) == 'perspicacityslicker'
     assert natalie(['backfire', 'fireproof', 'backflow', 'flowchart', 'background', 'groundhog']) == 'backgroundhog'
     assert natalie(['streaker', 'nudist', 'hippie', 'protestor', 'disturbance', 'cops']) == 'nudisturbance'
     assert natalie(['night', 'day']) == None
     assert natalie(['dog', 'dogs']) == None
     assert natalie(['test']) == None
-    assert natalie(['']) ==  None
+    assert natalie(['']) == None
     assert natalie(['ABC', '123']) == None
     assert natalie([]) == None
     return 'tests pass'
